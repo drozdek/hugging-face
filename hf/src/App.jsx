@@ -1,140 +1,81 @@
 import { useEffect, useRef, useState } from "react";
-import LanguageSelector from "./LanguageSelector";
-import Progress from "./Progress";
-// import { main } from "./Pipeline";
-
+import { pipeline } from "@huggingface/transformers";
 import "./App.css";
 
 function App() {
-  // Model loading
-  const [ready, setReady] = useState(null);
-  const [disabled, setDisabled] = useState(false);
-  const [progressItems, setProgressItems] = useState([]);
 
-  // Inputs and outputs
-  const [input, setInput] = useState("co jest kurwa ");
-  const [sourceLanguage, setSourceLanguage] = useState("eng_Latn");
-  const [targetLanguage, setTargetLanguage] = useState("fra_Latn");
-  const [output, setOutput] = useState("");
+  const [userText, setUserText] = useState("");
+  const [textSentiment, setTextSentiment] = useState("");
+  const [generatedText, setGeneratedText] = useState("");
 
-  // useEffect(() => {
-  //   main();
-  // }, []);
+  const handleChange = async (e) => {
+    setUserText(e?.target.value || "");
+  }
 
-  // Create a reference to the worker object.
-  const worker = useRef(null);
+  const runPipeline = async () => {
+    const classifier = await pipeline("sentiment-analysis");
+    const result = await classifier(userText);
+    return result;
+  }
 
-  // We use the `useEffect` hook to setup the worker as soon as the `App` component is mounted.
   useEffect(() => {
-    // Create the worker if it does not yet exist.
-    worker.current ??= new Worker(new URL("./worker.js", import.meta.url), {
-      type: "module",
+    runPipeline().then(result => {
+      setTextSentiment(result[0].label + " (" + result[0].score.toFixed(2) + ")");
+      console.log('Pipeline result: ', result);
+    })
+  }, [userText]);
+
+  // text generation example
+  /**
+   * Generates text based on a predefined prompt using a fine-tuned T5 model.
+   * 
+   * This handler initiates a text-to-text generation pipeline that answers questions
+   * about Rafal Drozdowski from Poland. It uses the Xenova/LaMini-Flan-T5-783M model
+   * to process the input and generate a response.
+   * 
+   * Pipeline options:
+   * @param {number} max_new_tokens - Maximum number of new tokens to generate (default: varies by model). Controls output length.
+   * @param {number} temperature - Controls randomness in output (0-2 range typical). Lower values (e.g., 0.7) make output more deterministic; higher values (e.g., 1.5) increase creativity and randomness.
+   * @param {number} repetition_penalty - Penalty for repeating tokens (default: 1.0). Values > 1.0 discourage repetition; higher values (e.g., 2.0) more aggressively prevent repeated content.
+   * @param {number} no_repeat_ngram_size - Prevents n-grams of this size from repeating (default: 0, disabled). Value of 1 prevents any token from repeating; 2 prevents 2-word sequences from repeating, etc.
+   * 
+   * @async
+   * @returns {Promise<void>} Sets the generated text in component state via setGeneratedText
+   */
+  const generateTextHandler = async () => {
+    const TEXT = "Answer only who is Rafal Drozdowski from Poland from Prabuty town?"
+
+    const gen = async () => {
+      const txt = await pipeline("text2text-generation",
+        "Xenova/LaMini-Flan-T5-783M", {
+        max_new_tokens: 100,
+        temperature: 2,
+        repetition_penalty: 1.0,
+        no_repeat_ngram_size: 1,
+      });
+      const res = await txt(TEXT);
+      console.log('Text generation result: ', res);
+      setGeneratedText(res[0].generated_text);
+    }
+    gen().then(res => {
+      console.log('Text generation result: ', res);
     });
 
-    // Create a callback function for messages from the worker thread.
-    const onMessageReceived = (e) => {
-      switch (e.data.status) {
-        case "initiate":
-          // Model file start load: add a new progress item to the list.
-          setReady(false);
-          setProgressItems((prev) => [...prev, e.data]);
-          break;
-
-        case "progress":
-          // Model file progress: update one of the progress items.
-          setProgressItems((prev) =>
-            prev.map((item) => {
-              if (item.file === e.data.file) {
-                return { ...item, progress: e.data.progress };
-              }
-              return item;
-            }),
-          );
-          break;
-
-        case "done":
-          // Model file loaded: remove the progress item from the list.
-          setProgressItems((prev) =>
-            prev.filter((item) => item.file !== e.data.file),
-          );
-          break;
-
-        case "ready":
-          // Pipeline ready: the worker is ready to accept messages.
-          setReady(true);
-          break;
-
-        case "update":
-          // Generation update: update the output text.
-          setOutput((o) => o + e.data.output);
-          break;
-
-        case "complete":
-          // Generation complete: re-enable the "Translate" button
-          setDisabled(false);
-          break;
-      }
-    };
-
-    // Attach the callback function as an event listener.
-    worker.current.addEventListener("message", onMessageReceived);
-
-    // Define a cleanup function for when the component is unmounted.
-    return () =>
-      worker.current.removeEventListener("message", onMessageReceived);
-  });
-
-  const translate = () => {
-    setDisabled(true);
-    setOutput("");
-    worker.current.postMessage({
-      text: input,
-      src_lang: sourceLanguage,
-      tgt_lang: targetLanguage,
-    });
   };
+
 
   return (
     <>
-      <h1>Transformers.js</h1>
-      <h2>ML-powered multilingual translation in React!</h2>
+      <h1>Hugging face: Transformers.js</h1>
+      <h2>ML-powered React application</h2>
 
       <div className="container">
-        <div className="language-container">
-          <LanguageSelector
-            type={"Source"}
-            defaultLanguage={"eng_Latn"}
-            onChange={(x) => setSourceLanguage(x.target.value)}
-          />
-          <LanguageSelector
-            type={"Target"}
-            defaultLanguage={"fra_Latn"}
-            onChange={(x) => setTargetLanguage(x.target.value)}
-          />
-        </div>
-
-        <div className="textbox-container">
-          <textarea
-            value={input}
-            rows={3}
-            onChange={(e) => setInput(e.target.value)}
-          ></textarea>
-          <textarea value={output} rows={3} readOnly></textarea>
-        </div>
-      </div>
-
-      <button disabled={disabled} onClick={translate}>
-        Translate
-      </button>
-
-      <div className="progress-bars-container">
-        {ready === false && <label>Loading models... (only run once)</label>}
-        {progressItems.map((data) => (
-          <div key={data.file}>
-            <Progress text={data.file} percentage={data.progress} />
-          </div>
-        ))}
-      </div>
+        <input type="text" onInput={(e) => handleChange(e)} />
+        <textarea value={textSentiment} onChange={() => { }} />
+        <br /><br />
+        <button onClick={() => generateTextHandler()}>Generate text</button>
+        <textarea value={generatedText} onChange={() => { }} />
+      </div >
     </>
   );
 }
