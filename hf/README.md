@@ -1,73 +1,56 @@
-# React + TypeScript + Vite
+# Hugging Face Transformers.js Playground
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A small React app that demonstrates running machine-learning pipelines in the browser with [Hugging Face Transformers.js](https://huggingface.co/docs/transformers.js). Try text sentiment analysis or speak a sample sentence and see what the speech recognizer hears.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Text sentiment analysis** — enter text and view the predicted sentiment label with its confidence score.
+- **Speech transcription** — press and hold the recording button, speak the displayed sample sentence, and release to transcribe it with the English Whisper model.
+- **In-browser inference** — the active examples use Transformers.js pipelines directly from the React app; no application-specific API server is configured.
+- **React and Vite development workflow** — hot module replacement during development, plus build, lint, and preview scripts.
 
-## React Compiler
+## Tech stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- TypeScript
+- Vite
+- Hugging Face Transformers.js
+- `Xenova/whisper-tiny.en` for speech recognition
 
-## Expanding the ESLint configuration
+## Getting started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js and npm
+- A modern browser. Speech recording requires microphone access and browser support for `MediaRecorder`.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Install and run
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm install @huggingface/transformers
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open the local URL printed by Vite. When prompted, allow microphone access to use speech transcription. The first inference may take longer while the model files are downloaded and cached by the browser.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+> **Dependency note:** The app imports `@huggingface/transformers`, but that package is not currently listed in `package.json`. The second install command adds it to the project so the app's imports can resolve.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Available scripts
+
+| Command           | Description                               |
+| ----------------- | ----------------------------------------- |
+| `npm run dev`     | Start the Vite development server.        |
+| `npm run build`   | Type-check and create a production build. |
+| `npm run lint`    | Run ESLint.                               |
+| `npm run preview` | Preview the production build locally.     |
+
+## How to use
+
+1. Type text into the sentiment analysis input. The predicted label and confidence appear below it.
+2. In the speech section, press and hold **Press and speak** while reading the sample sentence.
+3. Release the button to stop recording and view the transcription.
+
+## Project status
+
+This is a demo/playground rather than a production speech or sentiment service. The speech example computes a comparison score internally, but currently displays only the transcript. Other files in the repository contain experimental translation and text-generation examples that are not wired into the main interface.
